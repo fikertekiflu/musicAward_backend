@@ -1,22 +1,13 @@
 const mongoose = require("mongoose");
 
-const AboutUsSchema = new mongoose.Schema(
+const aboutUsSchema = new mongoose.Schema(
   {
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    description: {
-      type: String,
-      required: true,
-    },
-    image: {
-      type: String, 
-      required: true,
-    },
+    title: String,
+    description: String,
+    image: String,
+    cloudinary_id: String,
   },
-  { timestamps: true }
+  { timestamps: true } 
 );
 
-module.exports = mongoose.model("AboutUs", AboutUsSchema);
+module.exports = mongoose.model("AboutUs", aboutUsSchema);
