@@ -1,12 +1,15 @@
 const mongoose = require('mongoose');
 
 const PreviousWonArtistSchema = new mongoose.Schema({
-    artistName: { type: String, required: true },
+  round: { type: String, required: true }, // e.g., "The 10th"
+  artists: [{
+    name: { type: String, required: true },
     category: { type: String, required: true },
-    image: { type: String, required: true,},
-    awardRound: { type: String, required: true  },
-    year: { type: Number, required: true },
-    description: { type: String }
-}, { timestamps: true });
+    work: { type: String, required: true },
+    description: { type: String },
+    imageUrl: { type: String, required: true }, // Cloudinary URL
+    cloudinary_id: { type: String, required: true }, // Cloudinary Public ID
+  }],
+});
 
 module.exports = mongoose.model('PreviousWonArtist', PreviousWonArtistSchema);

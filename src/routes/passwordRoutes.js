@@ -1,9 +1,14 @@
 const express = require('express');
-const { requestPasswordReset, resetPassword } = require('../controllers/passwordController');
-
 const router = express.Router();
+const adminController = require('../controllers/passwordController'); // Adjust the path as needed
 
-router.post('/forgot-password', requestPasswordReset);
-router.post('/reset-password/:id/:token', resetPassword);
+// Route to request password reset
+router.post('/request-password', adminController.requestPasswordReset);
+
+// Route to verify OTP
+router.post('/verify-otp', adminController.verifyOTP);
+
+// Route to reset password
+router.post('/reset-password', adminController.resetPassword);
 
 module.exports = router;

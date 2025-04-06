@@ -8,6 +8,8 @@ const previousWonArtistRoutes = require("./src/routes/previousWonArtistRoutes");
 const locationRoutes = require("./src/routes/locationRoute");
 const sponsorRoutes = require("./src/routes/sponsorRoute");
 const galleryRoutes = require("./src/routes/galleryRoute");
+const passwordRoutes = require("./src/routes/passwordRoutes");
+const nomineeRoutes = require("./src/routes/nomineeRoute");
 
 const fs = require('fs');
 const path = require('path');
@@ -16,14 +18,17 @@ const cors = require('cors');
 app.use(express.json());
 app.use(cors());
 connectDB();
+
 app.use("/uploads", express.static("uploads"));
+app.use("/api", passwordRoutes);
 app.use("/api/aboutus", aboutUsRoutes);
 app.use("/api/gallery", galleryRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/wonArtists', previousWonArtistRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/sponsor', sponsorRoutes);
-app.use('/api/sponsor', sponsorRoutes);
+app.use('/api/nominee', nomineeRoutes);
+
 
 const uploadsDir = path.join(__dirname, 'uploads');
 
