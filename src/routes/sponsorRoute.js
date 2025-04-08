@@ -9,7 +9,6 @@ const {
 } = require('../controllers/sponsorController');
 
 const router = express.Router();
-
 router.post('/', upload.array('logos', 2), createSponsor);
 router.get('/', getSponsors);
 router.get('/:id', getSponsorById);
