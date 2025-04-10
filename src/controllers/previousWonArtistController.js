@@ -25,37 +25,29 @@ exports.createWonArtistRound = async (req, res) => {
         console.log("Artists Data:", artistsData);
 
         for (const artist of artistsData) {
-            const imageUrls = [];
-            const cloudinary_ids = [];
+            const file = req.files?.find(f => f.fieldname === artist.fileId); // Use optional chaining
+            if (!file && !artist.imageUrl) { // Check if file is missing AND no existing imageUrl
+                console.error(`Missing file for artist.fileId: ${artist.fileId}`);
+                return res.status(400).json({ error: `Image for ${artist.name} is missing.` });
+            }
 
-            for (let i = 0; i < 2; i++) {
-                const fileId = artist.fileIds[i];
-                const file = req.files.find(f => f.fieldname === fileId);
-
-                if (file) {
-                    try {
-                        await new Promise(resolve => setTimeout(resolve, 100)); // Keep the existing delay
-                        const uploadResult = await streamUpload(file);
-                        imageUrls.push(uploadResult.secure_url);
-                        cloudinary_ids.push(uploadResult.public_id);
-                    } catch (uploadError) {
-                        console.error(`Error uploading image ${i + 1} for ${artist.name}:`, uploadError);
-                        return res.status(500).json({ error: `Error uploading image ${i + 1} for ${artist.name}.` });
-                    }
-                } else if (i === 0) {
-                    console.error(`Missing first image for artist: ${artist.name}`);
-                    return res.status(400).json({ error: `First image for ${artist.name} is missing.` });
+            let uploadResult;
+            if (file) {
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    uploadResult = await streamUpload(file);
+                } catch (uploadError) {
+                    console.error(`Error uploading image for ${artist.name}:`, uploadError);
+                    return res.status(500).json({ error: `Error uploading image for ${artist.name}.` });
                 }
-                // It's okay if the second image is missing
             }
 
             uploadedArtists.push({
                 ...artist,
-                imageUrls,
-                cloudinary_ids,
+                imageUrl: uploadResult?.secure_url || artist.imageUrl, // Use existing if no new upload
+                cloudinary_id: uploadResult?.public_id || artist.cloudinary_id, // Use existing if no new upload
             });
         }
-
         const newRound = new PreviousWonArtist({ round, artists: uploadedArtists });
         await newRound.save();
         res.status(201).json(newRound);
@@ -75,66 +67,69 @@ exports.getWonArtistRounds = async (req, res) => {
 };
 
 exports.updateWonArtistRound = async (req, res) => {
-  try {
-      const { round } = req.body;
-      const artistsData = JSON.parse(req.body.artists); // Updated artist info
-      const existingRound = await PreviousWonArtist.findById(req.params.id);
-      if (!existingRound) return res.status(404).json({ message: 'Round not found' });
+    try {
+        const { round } = req.body;
+        const artistsData = JSON.parse(req.body.artists);
+        const existingRound = await PreviousWonArtist.findById(req.params.id);
+        if (!existingRound) return res.status(404).json({ message: 'Round not found' });
 
-      const updatedArtists = [];
+        const updatedArtists = [];
 
-      for (const artist of artistsData) {
-          const imageUrls = [...(artist.imageUrls || [null, null])];
-          const cloudinary_ids = [...(artist.cloudinary_ids || [null, null])];
+        for (const artistData of artistsData) {
+            const file = req.files?.[artistData.fileId];
+            let imageUrl = artistData.imageUrl;
+            let cloudinary_id = artistData.cloudinary_id;
 
-          for (let i = 0; i < 2; i++) {
-              const fileKey = req.files[`file-${artist.tempId}-${i + 1}`]?.[0] ?
-                  `file-${artist.tempId}-${i + 1}` :
-                  (artist.fileIds ? artist.fileIds[i] : null);
+            if (file) {
+                // If a new file is uploaded, handle the Cloudinary update
+                if (cloudinary_id) {
+                    try {
+                        await cloudinary.uploader.destroy(cloudinary_id);
+                    } catch (error) {
+                        console.error("Error deleting previous image:", error);
+                    }
+                }
+                const uploadResult = await streamUpload(file);
+                imageUrl = uploadResult.secure_url;
+                cloudinary_id = uploadResult.public_id;
+                console.log("New image uploaded, new imageUrl:", imageUrl);
+                console.log("New image uploaded, new cloudinary_id:", cloudinary_id);
+            } 
+             else {
+                // If no new file, explicitly preserve the existing image details
+                const existingArtist = existingRound.artists.find(artist => artist._id.toString() === artistData._id);
+                if (existingArtist) {
+                    imageUrl = existingArtist.imageUrl;
+                    cloudinary_id = existingArtist.cloudinary_id;
+                    console.log("Preserving existing imageUrl:", imageUrl);
+                    console.log("Preserving existing cloudinary_id:", cloudinary_id);
+                }
+            }
 
-              const file = req.files[fileKey]?.[0];
+            const updatedArtist = {
+                name: artistData.name,
+                category: artistData.category,
+                work: artistData.work,
+                description: artistData.description,
+                imageUrl,
+                cloudinary_id,
+                _id: artistData._id,
+            };
 
-              if (file) {
-                  try {
-                      if (cloudinary_ids[i]) {
-                          await cloudinary.uploader.destroy(cloudinary_ids[i]);
-                      }
-                      const uploadResult = await streamUpload(file);
-                      imageUrls[i] = uploadResult.secure_url;
-                      cloudinary_ids[i] = uploadResult.public_id;
-                  } catch (uploadError) {
-                      console.error('Cloudinary upload error:', uploadError);
-                      return res.status(500).json({ message: 'Failed to upload image.' });
-                  }
-              }
-          }
+            updatedArtists.push(updatedArtist);
+        }
 
-          updatedArtists.push({
-              _id: artist._id || undefined, // Keep existing _id if available
-              name: artist.name,
-              category: artist.category,
-              work: artist.work,
-              description: artist.description,
-              imageUrls,
-              cloudinary_ids
-          });
-      }
+        const updatedRound = await PreviousWonArtist.findByIdAndUpdate(
+            req.params.id,
+            { round, artists: updatedArtists },
+            { new: true, upsert: false }
+        );
 
-      const updatedRound = await PreviousWonArtist.findByIdAndUpdate(
-          req.params.id,
-          { round, artists: updatedArtists },
-          { new: true, runValidators: true } // Ensure schema validation runs
-      );
-
-      if (!updatedRound) {
-          return res.status(500).json({ message: 'Failed to update round in database.' });
-      }
-
-      res.status(200).json(updatedRound);
-  } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'Server error.', error: err.message });
-  }
+        res.status(200).json(updatedRound);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error.' });
+    }
 };
 
 exports.deleteWonArtistRound = async (req, res) => {
@@ -143,13 +138,10 @@ exports.deleteWonArtistRound = async (req, res) => {
         if (!round) return res.status(404).json({ message: 'Round not found' });
 
         for (const artist of round.artists) {
-            if (artist.cloudinary_ids && artist.cloudinary_ids.length > 0) {
-                for (const cid of artist.cloudinary_ids) {
-                    await cloudinary.uploader.destroy(cid);
-                }
+            if (artist.cloudinary_id) {
+                await cloudinary.uploader.destroy(artist.cloudinary_id);
             }
         }
-
         res.status(200).json({ message: 'Round deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
