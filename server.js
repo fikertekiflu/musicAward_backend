@@ -19,11 +19,12 @@ app.use(express.json());
 app.use(cors());
 connectDB();
 
+app.use('/api/auth', authRoutes);
+
 app.use("/uploads", express.static("uploads"));
 app.use("/api", passwordRoutes);
 app.use("/api/aboutus", aboutUsRoutes);
 app.use("/api/gallery", galleryRoutes);
-app.use('/api/auth', authRoutes);
 app.use('/api/wonArtists', previousWonArtistRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/sponsor', sponsorRoutes);
