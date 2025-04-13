@@ -10,6 +10,7 @@ const sponsorRoutes = require("./src/routes/sponsorRoute");
 const galleryRoutes = require("./src/routes/galleryRoute");
 const passwordRoutes = require("./src/routes/passwordRoutes");
 const nomineeRoutes = require("./src/routes/nomineeRoute");
+const contactRoute = require("./src/routes/contactRoute");
 
 const fs = require('fs');
 const path = require('path');
@@ -20,6 +21,7 @@ app.use(cors());
 connectDB();
 
 app.use('/api/auth', authRoutes);
+app.use('/api', contactRoute);
 
 app.use("/uploads", express.static("uploads"));
 app.use("/api", passwordRoutes);
