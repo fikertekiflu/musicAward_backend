@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 require('dotenv').config();
 const connectDB = require("./src/config/database")
 const authRoutes = require("./src/routes/authRoute")
@@ -11,7 +10,6 @@ const galleryRoutes = require("./src/routes/galleryRoute");
 const passwordRoutes = require("./src/routes/passwordRoutes");
 const nomineeRoutes = require("./src/routes/nomineeRoute");
 const contactRoute = require("./src/routes/contactRoute");
-
 const fs = require('fs');
 const path = require('path');
 const app = express();
@@ -39,6 +37,5 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
 }
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
